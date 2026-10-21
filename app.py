@@ -3,7 +3,7 @@ from html import escape
 import pandas as pd
 import streamlit as st
 import altair as alt
-from analysis import load_data, summarize, join_order
+from analysis import load_data, summarize, join_order, join_api, previous_candidates
 
 st.set_page_config(page_title='앉아가자 | 서울 버스',page_icon='🚌',layout='wide')
 st.markdown('''<style>
@@ -43,12 +43,20 @@ path=Path(__file__).parent/'bus_latest.csv'
 if not path.exists(): st.error('bus_latest.csv가 필요하다.'); st.stop()
 try: df=cached_load(str(path),path.stat().st_mtime_ns)
 except Exception as e: st.error(str(e)); st.stop()
+api_path=Path(__file__).parent/'api_stops.csv'
+@st.cache_data
+def cached_api(path,modified): return pd.read_csv(path,dtype=str)
+api=cached_api(str(api_path),api_path.stat().st_mtime_ns) if api_path.exists() else None
 with st.sidebar:
     st.markdown('<div class="brand"><div class="brand-icon">앉</div><div><div class="brand-name">앉아가자</div><div class="brand-sub">서울 버스 승하차 탐색</div></div></div>',unsafe_allow_html=True)
     st.subheader('버스 찾기')
     st.caption('노선번호를 입력해 검색할 수 있다.')
     month=st.selectbox('분석 월',sorted(df.use_ym.unique(),reverse=True))
     routes=sorted(df.loc[df.use_ym==month,'route_no'].unique())
+    if api is not None:
+        only_available=st.checkbox('운행 순서 확보 노선만 보기',value=True)
+        if only_available: routes=sorted(set(routes)&set(api.queried_busRouteNm))
+        st.caption(f'운행 순서와 통계가 연결된 노선 {len(set(df.route_no)&set(api.queried_busRouteNm))}개')
     route=st.selectbox('버스 노선번호',routes,index=routes.index('143') if '143' in routes else 0)
     period=st.radio('시간대',['오전 07:00–09:00','오후 18:00–20:00'])
     st.caption('07·08시 또는 18·19시의 합계. 월 전체 요일을 포함한다.')
@@ -71,15 +79,28 @@ if order_file:
         st.caption('정류장 순서 출처: '+', '.join(ordered.source_url.unique()))
     except Exception as e:
         st.error('순서 파일 확인 필요: '+str(e)); st.stop()
+elif api is not None:
+    try: ordered=join_api(api,summary,route)
+    except ValueError as e: st.warning(str(e)); ordered=None
+    if ordered is not None:
+        direction=st.selectbox('운행 방향',ordered.direction_label.unique())
+        ordered=ordered[ordered.direction_label==direction].reset_index(drop=True)
+        view=ordered.copy()
+        st.caption('운행 순서: API '+str(ordered.collected_at.iloc[0])[:10]+' 수집 · 승하차 통계: '+month[:4]+'년 '+month[4:]+'월')
+        st.caption('두 기준 시점의 노선 변경 여부는 확인이 필요하다. 연결되지 않는 정류장·반복 경유·회차 경계에서는 추천을 보류한다.')
+        missing=int((~view['통계 연결']).sum())
+        if missing: st.warning(f'이 방향의 {missing}개 정류장은 승하차 통계가 없어 그래프 값과 추천을 제공하지 않는다. 운행 순서에는 유지한다.')
+    else: view=summary.sort_values('순승차',ascending=False)
 else: view=summary.sort_values('순승차',ascending=False)
 st.markdown(f'<div class="route-head"><span class="bus-tag">버스 {escape(route)}</span><span class="route-meta">{escape(month[:4])}년 {escape(month[4:])}월 &nbsp; / &nbsp; {escape(period)}</span></div>',unsafe_allow_html=True)
 a,b,c=st.columns(3)
-a.metric('선택 범위 승차 합계',f'{int(view["승차"].sum()):,}명')
-b.metric('선택 범위 하차 합계',f'{int(view["하차"].sum()):,}명')
-c.metric('승차 집중 정류장',f'{int(view["승차 집중"].sum())}곳')
+unique_view=view.drop_duplicates('std_bus_sttn_id')
+a.metric('연결된 정류장 승차 합계',f'{int(unique_view["승차"].sum()):,}명')
+b.metric('연결된 정류장 하차 합계',f'{int(unique_view["하차"].sum()):,}명')
+c.metric('승차 집중 정류장',f'{int(unique_view["승차 집중"].sum())}곳')
 st.caption('단위는 월간 누적 인원이다. 1대당 또는 하루 평균 인원이 아니다.')
 st.subheader('승차가 집중되는 정류장')
-top=view[view['승차 집중']].sort_values('순승차',ascending=False).head(3)
+top=unique_view[unique_view['승차 집중']].sort_values('순승차',ascending=False).head(3)
 if top.empty:
     st.caption('현재 기준에 해당하는 승차 집중 정류장이 없다.')
 else:
@@ -99,17 +120,18 @@ st.caption('주황색: 해당 노선 전체 정류장 순승차의 80백분위 �
 st.subheader('탑승 정류장 살펴보기')
 target=st.selectbox('탑승 예정 정류장',view['정류장'].tolist())
 selected=view[view['정류장']==target].iloc[0]
-if selected['승차 집중']: st.warning(f'{selected.sttn_nm}: 승차 집중 지점이다. 순승차 {int(selected["순승차"]):,}명.')
+if pd.isna(selected['순승차']): st.warning('이 정류장과 연결되는 승하차 통계가 없다.')
+elif selected['승차 집중']: st.warning(f'{selected.sttn_nm}: 승차 집중 지점이다. 순승차 {int(selected["순승차"]):,}명.')
 else: st.write('이 정류장은 현재 기준에서 승차 집중 지점에 해당하지 않는다.')
 if ordered is not None:
     idx=ordered.index[ordered['정류장']==target][0]
-    alternatives=ordered.iloc[max(0,idx-2):idx]
+    alternatives=previous_candidates(ordered,idx)
     if not selected['승차 집중']: st.caption('앞선 정류장 대안은 승차 집중 지점을 선택하면 표시한다.')
-    elif alternatives.empty: st.write('기점이므로 앞선 정류장이 없다.')
+    elif alternatives.empty: st.write('추천 가능한 앞선 정류장이 없다. 기점·회차·반복 경유·자료 누락 또는 앞선 정류장의 순승차가 더 낮지 않은 경우 추천을 보류한다.')
     else:
         st.write('앞선 1~2개 정류장 후보')
         st.dataframe(alternatives[['stop_sequence','정류장','승차','하차','순승차']],hide_index=True,use_container_width=True)
-        st.caption('같은 방향의 앞선 정류장이다. 보행 가능 여부·배차·실제 차내 상황을 반영하지 않으며 착석을 보장하지 않는다.')
+        st.caption('같은 방향의 앞선 1~2개 중 월간 순승차가 더 낮은 정류장이다. 보행 가능 여부·배차·실제 차내 상황을 반영하지 않으며 착석을 보장하지 않는다.')
 with st.expander('계산 방법과 데이터 한계'):
     st.write('순승차 = 선택 시간대 승차 합계 − 하차 합계. 시간대별 집계는 같은 차량의 이동을 추적하지 못하므로 누적해 재차 인원으로 해석하지 않는다. 월 통계에는 평일·주말이 섞여 있다. 노선과 정류장 ID로 연결하며, 방향·운행 순서는 별도 확인 자료만 사용한다. 동일 정류장이 여러 방향에서 공유되면 원본 통계가 방향별로 분리되지 않을 수 있다.')
     st.markdown('[승하차 통계](https://data.seoul.go.kr/dataList/OA-12913/F/1/datasetView.do) · [경유정류소 정보](https://data.seoul.go.kr/dataList/OA-15261/L/1/datasetView.do)')
