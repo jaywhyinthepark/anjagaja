@@ -11,6 +11,27 @@ st.markdown('''<style>
 .stApp{background:#f3f5f7;color:var(--ink)}
 .block-container{max-width:1400px;padding-top:2rem;padding-bottom:2rem}
 [data-testid="stSidebar"]{background:#fff;border-right:1px solid var(--line)}
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] summary{color:#202632!important}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p{color:#657180!important}
+[data-testid="stSidebar"] [data-baseweb="select"]>div,
+[data-testid="stSidebar"] [data-baseweb="input"],
+[data-testid="stSidebar"] input{background-color:#f5f7f9!important;color:#202632!important;-webkit-text-fill-color:#202632!important}
+[data-testid="stSidebar"] [data-baseweb="select"] span{color:#202632!important}
+[data-testid="stSidebar"] input::placeholder{color:#657180!important;-webkit-text-fill-color:#657180!important}
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"],
+[data-testid="stSidebar"] button{background-color:#f5f7f9!important;color:#202632!important;border-color:#dfe4e9!important}
+[data-testid="stSidebar"] [data-testid="stExpander"]{background-color:#fff!important;border-color:#dfe4e9!important}
+[data-testid="stSidebar"] svg{fill:currentColor;color:#657180}
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] [role="option"]{background-color:#fff!important;color:#202632!important}
+[data-baseweb="popover"] [role="option"]:hover{background-color:#e7f6ef!important}
 [data-testid="stSidebar"] h1,[data-testid="stSidebar"] h2{letter-spacing:-1px}
 h1,h2,h3{color:var(--ink);letter-spacing:-.7px}
 [data-testid="stMetric"]{background:#fff;padding:20px 24px;border-radius:12px;border:1px solid var(--line);box-shadow:0 2px 5px #182b3a04}
