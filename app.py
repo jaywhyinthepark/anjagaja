@@ -7,7 +7,45 @@ from analysis import load_data, summarize, join_order, join_api, previous_candid
 
 st.set_page_config(page_title='앉아가자 | 서울 버스',page_icon='🚌',layout='wide')
 st.markdown('''<style>
-:root{--green:#03a85b;--ink:#202632;--line:#e6e9ed}
+:root{--green:#008447;--ink:#202632;--line:#e6e9ed}
+.stApp,[data-testid="stAppViewContainer"]{
+color-scheme:light;--text-color:#202632;--background-color:#f3f5f7;
+--secondary-background-color:#fff;--primary-color:#008447}
+/* Theme rules also apply to nested text nodes, which Streamlit colors separately. */
+[data-testid="stAppViewContainer"] :is(h1,h2,h3,h4,h5,h6),
+[data-testid="stMarkdownContainer"] :is(p,li,strong,em),
+[data-testid="stWidgetLabel"] *,
+[data-testid="stCheckbox"] label,
+[data-testid="stRadio"] label,
+[data-testid="stMetricValue"],[data-testid="stMetricValue"] *,
+[data-testid="stExpander"] summary *{color:#202632!important}
+[data-testid="stMetricLabel"],[data-testid="stMetricLabel"] *,
+[data-testid="stCaptionContainer"],[data-testid="stCaptionContainer"] *{color:#526171!important}
+[data-testid="stMarkdownContainer"] a{color:#006b3c!important}
+[data-testid="stSelectbox"] [data-baseweb="select"]>div,
+[data-testid="stTextInput"] [data-baseweb="input"],
+[data-testid="stNumberInput"] [data-baseweb="input"],
+[data-testid="stFileUploaderDropzone"]{background:#fff!important;color:#202632!important;border-color:#ccd3db!important}
+[data-testid="stSelectbox"] [data-baseweb="select"] span,
+[data-testid="stSelectbox"] input,
+[data-testid="stTextInput"] input,
+[data-testid="stNumberInput"] input{color:#202632!important;-webkit-text-fill-color:#202632!important}
+[data-baseweb="popover"] [role="option"] *,
+[data-baseweb="popover"] [role="listbox"] *{color:#202632!important}
+[data-testid="stAlert"]{background:#edf3f8!important;border:1px solid #d5e0e9;color:#263d50!important}
+[data-testid="stAlert"] [data-testid="stMarkdownContainer"] *{color:#263d50!important}
+[data-testid="stFileUploaderDropzone"] *,
+[data-testid="stButton"] button,
+[data-testid="stButton"] button *,
+[data-testid="stDownloadButton"] button,
+[data-testid="stDownloadButton"] button *{color:#202632!important}
+[data-testid="stButton"] button{background:#fff!important;border-color:#ccd3db!important}
+[data-testid="stDownloadButton"] button{background:#008447!important}
+[data-testid="stDownloadButton"] button,
+[data-testid="stDownloadButton"] button *{color:#fff!important}
+[data-testid="stTable"]{background:#fff!important;color:#202632!important}
+[data-testid="stTable"] :is(th,td){color:#202632!important;background:#fff!important;border-color:#dfe4e9!important}
+[data-testid="stAppViewContainer"] :is(button,input,[tabindex]):focus-visible{outline:2px solid #006b3c;outline-offset:2px}
 .stApp{background:#f3f5f7;color:var(--ink)}
 .block-container{max-width:1400px;padding-top:2rem;padding-bottom:2rem}
 [data-testid="stSidebar"]{background:#fff;border-right:1px solid var(--line)}
@@ -42,17 +80,17 @@ h1,h2,h3{color:var(--ink);letter-spacing:-.7px}
 [data-testid="stExpander"]{background:#fff;border-radius:10px}
 [data-testid="stDataFrame"]{border-radius:10px}
 .brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-.brand-icon{background:#03a85b;color:#fff;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:13px;font-size:25px;font-weight:900}
-.brand-name{font-size:26px;font-weight:850;letter-spacing:-1.2px}.brand-sub{font-size:12px;color:#78818d;margin-top:2px}
+.brand-icon{background:#008447;color:#fff;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:13px;font-size:25px;font-weight:900}
+.brand-name{color:#202632;font-size:26px;font-weight:850;letter-spacing:-1.2px}.brand-sub{font-size:12px;color:#526171;margin-top:2px}
 .hero{background:#fff;border:1px solid var(--line);border-radius:14px;padding:25px 28px;margin-bottom:22px}
-.eyebrow{color:#03a85b;font-weight:750;font-size:12px;letter-spacing:1px}
+.eyebrow{color:#008447;font-weight:750;font-size:12px;letter-spacing:1px}
 .hero h1{font-size:30px;margin:5px 0 6px;padding:0;line-height:1.5}
 .hero p{font-size:14px;color:#697480;margin:0;line-height:1.7}
 .route-head{display:flex;align-items:center;gap:12px;margin:8px 0 18px;flex-wrap:wrap}
 .bus-tag{background:#e7f6ef;color:#008448;border:1px solid #ccebdc;border-radius:7px;padding:6px 12px;font-size:19px;font-weight:800}
 .route-meta{color:#6d7580;font-size:14px}
 .stop-card{background:white;border:1px solid var(--line);border-radius:11px;padding:17px 18px;margin-bottom:12px;min-height:130px}
-.stop-rank{color:#df693d;font-size:12px;font-weight:750}.stop-name{font-size:16px;font-weight:750;margin:8px 0;line-height:1.5}.stop-detail{color:#717b87;font-size:12px;line-height:1.8}
+.stop-rank{color:#a8431e;font-size:12px;font-weight:750}.stop-name{color:#202632;font-size:16px;font-weight:750;margin:8px 0;line-height:1.5}.stop-detail{color:#526171;font-size:12px;line-height:1.8}
 @media(max-width:640px){.block-container{padding:1rem}.hero{padding:19px}.hero h1{font-size:24px}.brand-name{font-size:23px}[data-testid="stMetric"]{padding:13px}}
 </style>''',unsafe_allow_html=True)
 st.markdown('''<div class="hero"><div class="eyebrow">SEOUL BUS EXPLORER</div><h1>조금 앞에서 타는 여유, 앉아가자</h1><p>출퇴근 시간, 사람들이 몰리는 정류장을 먼저 살펴보자.<br>과거 월간 통계를 분석하며 실제 빈 좌석이나 착석 확률을 제공하지 않는다.</p></div>''',unsafe_allow_html=True)
@@ -136,7 +174,7 @@ chart=alt.Chart(view).mark_bar(cornerRadiusEnd=3).encode(
     color=alt.condition('datum["승차 집중"]',alt.value('#e77d50'),alt.value('#03a85b')),
     tooltip=['정류장','승차','하차','순승차','승차 집중']).properties(height=max(300,len(view)*23))
 with st.container(height=520,border=True):
-    st.altair_chart(chart.configure_view(strokeWidth=0).configure_axis(labelColor='#657180',titleColor='#657180',gridColor='#edf0f3'),use_container_width=True)
+    st.altair_chart(chart.configure(background='#ffffff').configure_view(strokeWidth=0).configure_axis(labelColor='#526171',titleColor='#526171',gridColor='#edf0f3'),use_container_width=True,theme=None)
 st.caption('주황색: 해당 노선 전체 정류장 순승차의 80백분위 이상이면서 순승차가 양수인 곳. 탐색용 기준이며 실제 혼잡 판정이 아니다.')
 st.subheader('탑승 정류장 살펴보기')
 target=st.selectbox('탑승 예정 정류장',view['정류장'].tolist())
